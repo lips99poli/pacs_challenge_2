@@ -59,9 +59,9 @@ struct Compressed_Container_Struct{
         non_major_index.clear();
         major_change_index.clear();
     };
-    bool empty(){
-        return values.empty() && non_major_index.empty() && major_change_index.empty();
-    }
+    bool empty() const {
+        return (values.empty() && non_major_index.empty() && major_change_index.empty());
+    };
 };
 
 #endif
