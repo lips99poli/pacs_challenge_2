@@ -54,7 +54,7 @@ struct Compressed_Container_Struct{
     std::vector< value_type<T> > values;
     std::vector< size_type<T> > non_major_index;
     std::vector< size_type<T> > major_change_index;
-    void clear(){
+    void clear() {
         values.clear();
         non_major_index.clear();
         major_change_index.clear();
