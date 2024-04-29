@@ -5,6 +5,12 @@
 #include <iostream>
 #include <limits>
 #include <algorithm>
+#include <numeric>
+#include <execution>
+
+// Aggiungere overload operator << per aggiungere elementi
+// Leggere matrice da file
+// operatore*
 
 enum State {
     UNCOMPRESSED=0,
@@ -64,8 +70,12 @@ class SparseMatrix{
         }
     };
 
-    size_type get_rows()const {return rows;};
-    size_type get_cols()const {return cols;};
+    std::vector<T> get_row(size_type r)const;
+    std::vector<T> get_col(size_type c)const;
+
+    template<ExtractOptions RorC>
+    std::vector<T> extract_vector(size_type k) const;
+
     inline bool is_compressed() const;
 
     void resize(size_type R, size_type C);
@@ -82,6 +92,9 @@ class SparseMatrix{
 
     // Delete wrongly added element
     bool delete_element(const size_type r, const size_type c);
+
+    // Multiply operator by vectors
+    std::vector<T> operator*(const std::vector<T>& v) const;
 
 };
 
@@ -119,6 +132,48 @@ bool SparseMatrix<SO,T>::verify_presence(size_type r, size_type c) const {
 
 
 // PUBBLIC METHODS:
+
+// Extract vector
+template<StorageOptions SO, typename T>
+template<ExtractOptions RorC>
+std::vector<T> SparseMatrix<SO,T>::extract_vector(size_type k) const{
+    size_type dim;
+    if constexpr(RorC == ExtractOptions::Row){dim = cols;}
+    else{ dim = rows;}
+    std::vector<T> vec(dim);
+    
+    if constexpr(static_cast<int>(RorC) == static_cast<int>(SO)){
+        if (state == COMPRESSED){
+            for(size_type i=compressed_data.major_change_index[k]; i<compressed_data.major_change_index[k+1]; ++i){
+                vec[compressed_data.non_major_index[i]] = compressed_data.values[i];
+            }
+        }else{
+
+        }
+            
+    }else{
+        if(state == COMPRESSED){
+            for(size_type i=0; i<compressed_data.major_change_index.size()-1; ++i){
+                for(size_type j=compressed_data.major_change_index[i]; j<compressed_data.major_change_index[i+1]; ++j){
+                    if(compressed_data.non_major_index[j] == k){
+                        vec[i] = compressed_data.values[j];
+                    }
+                }
+            }
+        }
+    }
+    return vec;
+};
+
+template<StorageOptions SO, typename T>
+std::vector<T> SparseMatrix<SO,T>::get_row(size_type r)const{
+    return extract_vector<Row>(r);
+};
+
+template<StorageOptions SO, typename T>
+std::vector<T> SparseMatrix<SO,T>::get_col(size_type c)const{
+    return extract_vector<Col>(c);
+};
 
 // Verify state
 template<StorageOptions SO, typename T>
@@ -190,9 +245,11 @@ void SparseMatrix<SO,T>::uncompress(){
                 //typename uncompressed_container_type::key_type position;
                 key_type position;
                 if (SO == RowMajor) {
-                    position = {major,compressed_data.non_major_index[non_major]};
+                    position[0] = major;
+                    position[1] = compressed_data.non_major_index[non_major];
                 } else {
-                    position = {compressed_data.non_major_index[non_major],major};
+                    position[1] = compressed_data.non_major_index[non_major];
+                    position[0] = major;
                 }
                 new_uncompressed_data[position] = compressed_data.values[non_major];
             }
@@ -248,12 +305,12 @@ T& SparseMatrix<SO,T>::operator()(const size_type r, const size_type c) {
             }
         }else{
             if(state == UNCOMPRESSED){
-                
                 std::cout << "L'elemento in posizione {" << r << "," << c << "} è stato aggiunto" << std::endl;
                 return uncompressed_data[position];
             }
             else{
-                return nan;
+                std::cerr << "L'elemento in posizione {" << r << "," << c << "} non è presente, il valore è casuale" << std::endl;
+                return buffer;
             }
         }
     }
@@ -270,6 +327,47 @@ bool SparseMatrix<SO,T>::delete_element(const size_type r, const size_type c){
     }
     return false;
 };
+
+
+// Multiply operator by vectors
+template<StorageOptions SO, typename T>
+std::vector<T> SparseMatrix<SO,T>::operator*(const std::vector<T>& v) const{
+    std::vector<T> result(rows);
+    //result.resize(rows);
+    if constexpr (SO==RowMajor){
+        if(state == UNCOMPRESSED){
+            for(auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit){
+                result[cit->first[0]] += cit->second * v[cit->first[1]];
+            }
+        }else{//compressed
+            for(size_type i=0; i<rows; ++i){
+                std::vector<T> row = get_row(i);
+                result[i] = std::inner_product(row.begin(),row.end(),v.begin(),0.0);
+            }
+        }
+    }else { //ColumnMajor
+        if(state == UNCOMPRESSED){
+            for(auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit){
+                result[cit->first[0]] += cit->second * v[cit->first[1]];
+            }
+        }else{//compressed
+            for(size_type i=0; i<cols; ++i){
+                std::vector<T> col = get_col(i);
+                std::transform(std::execution::par,col.begin(),col.end(),col.begin(),[v,i](T col_i){return v[i]*col_i;});
+                std::transform(std::execution::par,result.begin(),result.end(),col.begin(),result.begin(),std::plus<T>());
+            }
+        }
+    }
+    return result;
+}
+
+
+
+
+
+
+
+
 
 
 
