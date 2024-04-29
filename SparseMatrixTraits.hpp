@@ -13,6 +13,11 @@ enum StorageOptions{
     ColumnMajor
 };
 
+enum ExtractOptions{
+    Row,
+    Col
+};
+
 // Forward declaration, needed for defining Value_Traits
 // template<StorageOptions SO, typename T>
 // struct Uncompressed_Container_Struct;
@@ -62,6 +67,7 @@ struct Key_Uncompressed_Struct{
     // }
 
     Key_Uncompressed_Struct(const std::array< size_type<SO,T>,2 >& key_): key(key_){};
+    Key_Uncompressed_Struct() = default;
 
 
     bool operator< (const Key_Uncompressed_Struct<SO,T>& rhs) const{
