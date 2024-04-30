@@ -18,6 +18,12 @@ enum ExtractOptions{
     Col
 };
 
+enum NormType{
+    One,
+    Infinity,
+    Froebenius
+};
+
 // Forward declaration, needed for defining Value_Traits
 template<StorageOptions SO,typename T>
 struct Custom_Compare;

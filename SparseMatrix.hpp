@@ -91,10 +91,12 @@ class SparseMatrix{
     // Multiply operator by matrix
     std::vector<std::vector<T>> operator*(const SparseMatrix<SO,T>& v) const;
 
-    // Specializzazione per complessi
-    // Multiply operator by vectors
-    //std::vector<std::complex<T>> operator*(const std::vector<std::complex<T>>& v) const;
+    // Read matrix from file
+    friend SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename);
 
+    // Norm
+    template<NormType N>
+    T norm() const;
 };
 
 
@@ -377,38 +379,64 @@ std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,
     return result;
 }
 
+template<StorageOptions SO, typename T>
+SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file) {
+        throw std::runtime_error("Unable to open file");
+    }
 
-// // Multiply operator by vectors
-// template<StorageOptions SO, typename T>
-// std::vector<std::complex<T>> SparseMatrix<SO,T>::operator*(const std::vector<std::complex<T>>& v) const{
-//     std::vector<std::complex<T>> result(rows);
-//     if(state == UNCOMPRESSED){
-//         for(auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit){
-//             result[cit->first[0]] += cit->second * v[cit->first[1]];
-//         }
-//     }else{//compressed
-//         if constexpr (SO==RowMajor){
-//             for(size_type i=0; i<rows; ++i){
-//                 std::vector<T> row = get_row(i);
-//                 result[i] = std::inner_product(row.begin(),row.end(),v.begin(),T(0));
-//             }
-//         }else { //ColumnMajor
-//             for(size_type i=0; i<cols; ++i){
-//                 std::vector<std::complex<T>> col = get_col(i);
-//                 std::transform(std::execution::par,col.begin(),col.end(),col.begin(),[&v,i](T col_i){return v[i]*col_i;});
-//                 std::transform(std::execution::par,result.begin(),result.end(),col.begin(),result.begin(),std::plus<T>());
-//             }
-//         }
-//     }
-//     return result;
-// }
+    while (file.peek() == '%') {
+        file.ignore(2048, '\n');
+    }
 
+    // Leggi le dimensioni della matrice
+    std::size_t n_rows, n_cols, n_elements;
+    file >> n_rows >> n_cols >> n_elements;
 
+    // Creazione container per i dati
+    uncompressed_container_type data_map;
 
+    for (std::size_t i = 0; i < n_elements; ++i) {
+        std::size_t row, col;
+        T value;
+        file >> row >> col >> value;
+        data_map[{row-1, col-1}] = value;
+    }
 
+    return SparseMatrix<SO, T>(n_rows, n_cols, data_map);
+}
 
+template<StorageOptions SO, typename T>
+template<NormType N>
+T SparseMatrix<SO,T>::norm() const{
+    T norm = 0;
+    if(state == COMPRESSED){
+        if constexpr (N == One){
+            for(size_type i=0; i<cols; ++i){
+                std::vector<T> col = get_col(i);
+                T row_sum = std::accumulate(col.begin(),col.end(),T(0),[](T acc, const T& p){return acc+std::abs(p);});
+                norm = std::max(norm,row_sum);
+            }
+        }else if constexpr (N == Infinity){
+            for(size_type i=0; i<rows; ++i){
+                std::vector<T> row = get_col(i);
+                T col_sum = std::accumulate(row.begin(),row.end(),T(0),[](T acc, const T& p){return acc+std::abs(p);});
+                norm = std::max(norm,col_sum);
+            }
+        }else if constexpr (N == Froebenius){
+            norm = std::sqrt(std::accumulate(compressed_data.values.cbegin(),compressed_data.values.cend(),T(0),[](T acc, T v){return acc+std::pow(v,2);}));
+        }
+    }else{
+        if constexpr (N == One){
 
+        }else if constexpr (N == Infinity){
 
+        }else if constexpr (N == Froebenius){
 
+        }
+    }
+    return norm;
+};
 
 #endif
