@@ -2,16 +2,8 @@
 #define SM_HPP
 
 #include "SparseMatrixTraits.hpp"
-#include <iostream>
-#include <limits>
-#include <algorithm>
-#include <numeric>
-#include <execution>
-#include <complex>
 
 // Aggiungere overload operator << per aggiungere elementi
-// Leggere matrice da file
-// operatore*
 
 enum State {
     UNCOMPRESSED=0,
@@ -26,6 +18,7 @@ class SparseMatrix{
     using uncompressed_container_type = typename Value_Traits<SO,T>::uncompressed_container;
     using compressed_container_type = typename Value_Traits<SO,T>::compressed_container;
     using key_type = typename Value_Traits<SO,T>::key_type;
+    using norm_type = typename Value_Traits<SO,T>::norm_type;
 
     private:
     size_type rows;
@@ -43,7 +36,8 @@ class SparseMatrix{
     inline bool verify_presence(size_type r, size_type c) const;
 
     public:
-    // Constructor    
+    // Constructors:
+    // Default and custom constructor
     SparseMatrix(size_type R = 0, size_type C = 0, const uncompressed_container_type& init = {}):
     rows(R), cols(C), uncompressed_data(init), state(UNCOMPRESSED){
         if (!init.empty()){
@@ -60,7 +54,17 @@ class SparseMatrix{
             }
             if (adjusted) std::cout << "Dimensions adjusted: R = " << rows << ", C = " << cols << std::endl;
         }
-    };   
+    };
+    // Copy constructor: forse non serve perchè fa le stesse cose che farebbe il default siccome i container sono pieni uno alla volta
+    // SparseMatrix(const SparseMatrix<SO,T>& other):rows(other.rows), cols(other.cols), state(other.state){
+    //     if (state == UNCOMPRESSED){
+    //         uncompressed_data = other.uncompressed_data;
+    //     }else{
+    //         compressed_data = other.compressed_data;
+    //     }
+    // }
+
+    // Quindi dovrei già avere anche l'assignment operator
 
     std::vector<T> get_row(size_type r)const;
     std::vector<T> get_col(size_type c)const;
@@ -92,11 +96,13 @@ class SparseMatrix{
     std::vector<std::vector<T>> operator*(const SparseMatrix<SO,T>& v) const;
 
     // Read matrix from file
-    friend SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename);
+    template<StorageOptions SO_file, typename T_file>
+    friend SparseMatrix<SO_file, T_file> read_matrix_from_file(const std::string& filename);
 
     // Norm
-    template<NormType N>
-    T norm() const;
+    template<NormOptions N>
+    norm_type norm() const;
+
 };
 
 
@@ -382,7 +388,8 @@ std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,
 template<StorageOptions SO, typename T>
 SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
     std::ifstream file(filename);
-    if (!file) {
+
+    if (!file.is_open()) {
         throw std::runtime_error("Unable to open file");
     }
 
@@ -391,14 +398,14 @@ SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
     }
 
     // Leggi le dimensioni della matrice
-    std::size_t n_rows, n_cols, n_elements;
+    size_type<SO,T> n_rows, n_cols, n_elements;
     file >> n_rows >> n_cols >> n_elements;
 
     // Creazione container per i dati
-    uncompressed_container_type data_map;
+    uncompressed_container_type<SO,T> data_map;
 
-    for (std::size_t i = 0; i < n_elements; ++i) {
-        std::size_t row, col;
+    for (size_type<SO,T> i = 0; i < n_elements; ++i) {
+        size_type<SO,T> row, col;
         T value;
         file >> row >> col >> value;
         data_map[{row-1, col-1}] = value;
@@ -407,33 +414,42 @@ SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
     return SparseMatrix<SO, T>(n_rows, n_cols, data_map);
 }
 
-template<StorageOptions SO, typename T>
-template<NormType N>
-T SparseMatrix<SO,T>::norm() const{
-    T norm = 0;
+// Norm
+template<StorageOptions SO,typename T>
+template<NormOptions N>
+typename SparseMatrix<SO,T>::norm_type SparseMatrix<SO,T>::norm() const{
+    norm_type norm(0);
     if(state == COMPRESSED){
         if constexpr (N == One){
             for(size_type i=0; i<cols; ++i){
                 std::vector<T> col = get_col(i);
-                T row_sum = std::accumulate(col.begin(),col.end(),T(0),[](T acc, const T& p){return acc+std::abs(p);});
-                norm = std::max(norm,row_sum);
+                norm_type sum = std::accumulate(col.begin(),col.end(),0.,[](norm_type acc, const T& p){return acc+std::abs(p);});
+                norm = std::max(norm,sum);
             }
         }else if constexpr (N == Infinity){
             for(size_type i=0; i<rows; ++i){
-                std::vector<T> row = get_col(i);
-                T col_sum = std::accumulate(row.begin(),row.end(),T(0),[](T acc, const T& p){return acc+std::abs(p);});
-                norm = std::max(norm,col_sum);
+                std::vector<T> row = get_row(i);
+                norm_type sum = std::accumulate(row.begin(),row.end(),0.,[](norm_type acc, const T& p){return acc+std::abs(p);});
+                norm = std::max(norm,sum);
             }
         }else if constexpr (N == Froebenius){
-            norm = std::sqrt(std::accumulate(compressed_data.values.cbegin(),compressed_data.values.cend(),T(0),[](T acc, T v){return acc+std::pow(v,2);}));
+            norm = std::sqrt(std::accumulate(compressed_data.values.cbegin(),compressed_data.values.cend(),0.,[](norm_type acc, const T& v){return acc+std::abs(v)*std::abs(v);}));
         }
-    }else{
+    }else{//uncompressed
         if constexpr (N == One){
-
+            std::vector<norm_type> col_sum(cols);
+            for(auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit){
+                col_sum[cit->first[1]] += std::abs(cit->second);
+            }
+            norm = *std::max_element(col_sum.begin(),col_sum.end());
         }else if constexpr (N == Infinity){
-
+            std::vector<norm_type> row_sum(rows);
+            for(auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit){
+                row_sum[cit->first[0]] += std::abs(cit->second);
+            }
+            norm = *std::max_element(row_sum.begin(),row_sum.end());
         }else if constexpr (N == Froebenius){
-
+            norm = std::accumulate(uncompressed_data.begin(),uncompressed_data.end(),0.,[](norm_type acc, const auto& pair){return acc+std::abs(pair.second)*std::abs(pair.second);}); //std::pair<key_type, T>
         }
     }
     return norm;
