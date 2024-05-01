@@ -226,5 +226,33 @@ int main(){
 
     std::cout << "Norma Fro: " << m_complex.norm<Froebenius>() << std::endl;
 
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+
+
+    SparseMatrix<SO,double> m7 = read_matrix_from_file<SO,double>("lnsp_131.mtx");
+    std::cout << "Matrix read from file" << std::endl;
+    std::cout << "Norma 1: " << m7.norm<One>() << std::endl;
+    std::cout << "Norma Inf: " << m7.norm<Infinity>() << std::endl;
+    std::cout << "Norma Fro: " << m7.norm<Froebenius>() << std::endl;
+
+    std::cout << std::endl;
+    std::cout << std::endl;
+    
+    std::cout <<"El:" << m7(0,0) << std::endl;
+    std::cout <<"El:" << m7(8,0) << std::endl;
+    std::cout <<"El:" << m7(35,10) << std::endl;
+
+    
+
+    std::cout << std::endl;
+    std::cout << std::endl;
+    m7.compress();
+    
+    std::cout <<"El:" << m7(0,0) << std::endl;
+    std::cout <<"El:" << m7(8,0) << std::endl;
+    std::cout <<"El:" << m7(35,10) << std::endl;
+
     return 0;
 };
