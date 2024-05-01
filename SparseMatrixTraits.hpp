@@ -6,6 +6,16 @@
 #include<map>
 #include<array>
 #include<vector>
+#include<fstream>
+#include<string>
+#include<stdexcept>
+
+#include <iostream>
+#include <limits>
+#include <algorithm>
+#include <numeric>
+#include <execution>
+#include <complex>
 
 // Enumerator for Storage options
 enum StorageOptions{
@@ -18,7 +28,7 @@ enum ExtractOptions{
     Col
 };
 
-enum NormType{
+enum NormOptions{
     One,
     Infinity,
     Froebenius
@@ -40,6 +50,7 @@ struct Value_Traits{
     using uncompressed_container = std::map< std::array< size_type ,2 >, T, Custom_Compare<SO,T>>;
     using compressed_container = Compressed_Container_Struct<SO,T>;
     using key_type = std::array< size_type ,2 >;
+    using norm_type = double;
 };
 
 // Define the type alias for type of the indexes of the matrix
