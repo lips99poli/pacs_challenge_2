@@ -147,7 +147,7 @@ int main(){
     //const SparseMatrix<RowMajor,double>& mc = m;
     //std::cout << mc(2,3) << std::endl;
 
-    uncompressed_container_type<SO,std::complex<double>> dati_complex = {{{0,1},1.},{{0,2},2.9},{{1,2},2.},{{3,0},3.},{{1,9},40.3},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
+    uncompressed_container_type<SO,std::complex<double>> dati_complex = {{{0,1},{1.,3.}},{{0,2},{2.9,4.5}},{{1,2},{2.,3.1}},{{3,0},{3.,2.9}},{{1,9},{40.3,1}},{{3,3},{4.,0.6}},{{4,3},{5.,2.32}},{{4,5},{6.,9.8}}};
 
     SparseMatrix<SO,std::complex<double>> m_complex (5,10,dati_complex);
 
@@ -210,5 +210,21 @@ int main(){
 
     std::cout << std::endl;
     std::cout << std::endl;
+
+    std::cout << "Norma 1: " << m.norm<One>() << std::endl;
+
+    std::cout << "Norma Inf: " << m.norm<Infinity>() << std::endl;
+
+    std::cout << "Norma Fro: " << m.norm<Froebenius>() << std::endl;
+
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Norma 1: " << m_complex.norm<One>() << std::endl;
+
+    std::cout << "Norma Inf: " << m_complex.norm<Infinity>() << std::endl;
+
+    std::cout << "Norma Fro: " << m_complex.norm<Froebenius>() << std::endl;
+
     return 0;
 };
