@@ -94,3 +94,71 @@ int main(int argc, char* argv[]){
 
     return 0;
 };
+
+
+/*  //Old test for compress and uncompress methods.
+    //If you want you can add these lines inside main file and run it. (better to comment the actual lines of main.cpp to avoid name conflicts)
+    constexpr StorageOptions SO = RowMajor;
+    uncompressed_container_type<SO,double> dati = {{{0,1},1.},{{0,2},2.9},{{1,2},2.},{{3,0},3.},{{1,9},40.3},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
+
+    //uncompressed_container_type<ColumnMajor,double> dati = {{{0,1},1.},{{1,2},2.},{{3,0},3.},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
+    SparseMatrix<SO,double> m (5,10,dati);
+
+    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
+        std::vector<double> r1 = m.get_row(i);
+        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
+            std::cout << *cit << " ";
+        }
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
+        std::vector<double> r1 = m.get_col(i);
+        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
+            std::cout << *cit << " ";
+        }
+    }
+    std::cout << std::endl;
+    std::cout <<"matrice compressa"<<std::endl;
+    std::cout << std::endl;
+
+    m.compress();
+
+    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
+        std::vector<double> r1 = m.get_row(i);
+        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
+            std::cout << *cit << " ";
+        }
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
+        std::vector<double> r1 = m.get_col(i);
+        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
+            std::cout << *cit << " ";
+        }
+    }
+
+    std::cout << std::endl;
+    std::cout <<"matrice uncompressa"<<std::endl;
+    std::cout << std::endl;
+
+    m.uncompress();
+    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
+        std::vector<double> r1 = m.get_row(i);
+        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
+            std::cout << *cit << " ";
+        }
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
+        std::vector<double> r1 = m.get_col(i);
+        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
+            std::cout << *cit << " ";
+        }
+    }
+
+*/
