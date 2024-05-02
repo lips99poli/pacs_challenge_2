@@ -3,7 +3,7 @@
 int main(int argc, char* argv[]){
     // Parse command line arguments
     int verbose = 0; //is 0, 1, or 2
-    int n_iter = 1;
+    int n_iter = 1; //is unsigned int
     // Loop over all command line arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -32,7 +32,10 @@ int main(int argc, char* argv[]){
         }
     }
 
+    // Definition of the timer
     Timings::Chrono timer;
+
+    // Define the storage options
     constexpr StorageOptions SO_R = RowMajor;
     constexpr StorageOptions SO_C = ColumnMajor;
 
@@ -103,6 +106,7 @@ int main(int argc, char* argv[]){
 
 /*  //Old test for compress and uncompress methods.
     //If you want you can add these lines inside main file and run it. (better to comment the actual lines of main.cpp to avoid name conflicts)
+    // non sono molto eleganti, sono stati utili in fase di progettazione
     constexpr StorageOptions SO = RowMajor;
     uncompressed_container_type<SO,double> dati = {{{0,1},1.},{{0,2},2.9},{{1,2},2.},{{3,0},3.},{{1,9},40.3},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
 
