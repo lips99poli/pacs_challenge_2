@@ -70,6 +70,7 @@ using uncompressed_container_type = typename Value_Traits<SO,T>::uncompressed_co
 template<StorageOptions SO,class T>
 using compressed_container_type = typename Value_Traits<SO,T>::compressed_container;
 
+// Define the struct that contains the operator< for the type of the key of the uncompressed matrix
 template<StorageOptions SO,class T>
 struct Custom_Compare{
     bool operator() (const std::array< size_type<SO,T> ,2 >& lhs, const std::array< size_type<SO,T> ,2 >& rhs)const{

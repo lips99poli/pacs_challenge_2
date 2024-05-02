@@ -212,6 +212,7 @@ bool SparseMatrix<SO,T>::is_compressed() const {
 };
 
 // Resize
+// Controlla le dimensioni e le ingrandisce in caso ci siano elementi con indici maggiori delle dimensioni. Se le dimensioni sono minori di quelle attuali allora elimina gli elementi con indici maggiori delle dimensioni
 template<StorageOptions SO, typename T>
 void SparseMatrix<SO,T>::resize(size_type R, size_type C){
     if(state == COMPRESSED){
@@ -231,7 +232,9 @@ void SparseMatrix<SO,T>::resize(size_type R, size_type C){
     }
 };
 
-// Compress 
+// Compress
+// Cambia la modalità con cui la matrice è salvata in memoria. Interessante l'ultizzo del template parameter StorageOptions per evitare if statements nel codice.
+// Si sfrutta la conversione in int e il suo utilizzo per estrarre il corrispondente valore all'interno della chiave della mappa. Per il corretto funzionamento ho dovuto salvare oltre allo StorageOptions corretto della matrice anche il suo opposto. (membro otherSO static constexpr)
 template<StorageOptions SO, typename T>
 void SparseMatrix<SO,T>::compress(){
     if(state==UNCOMPRESSED){
@@ -260,6 +263,7 @@ void SparseMatrix<SO,T>::compress(){
 };
 
 // Uncompress 
+// Esegue l'inverso del metodo precedente, e sfrutta lo stesso accorgimento. In questo caso però non c'è bisogno di cancellare i valori dalla mappa perchè la mappa viene sovrascritta.
 template<StorageOptions SO, typename T>
 void SparseMatrix<SO,T>::uncompress(){
     if(state == COMPRESSED){
@@ -285,6 +289,7 @@ void SparseMatrix<SO,T>::uncompress(){
 };
 
 // Const version of call operator
+// Metodo const per leggere elementi dentro la matrice, non modifica in alcun modo lo stato interno della matrice
 template<StorageOptions SO, typename T>
 const T& SparseMatrix<SO,T>::operator() (const size_type r, const size_type c) const {
     if(in_bound(r,c)){
@@ -309,6 +314,9 @@ const T& SparseMatrix<SO,T>::operator() (const size_type r, const size_type c) c
 };
 
 // Non-const version of call operator
+// Se gli indici fìdati sono presenti restituisco una reference al valore e posso leggerlo e scriverlo in entrmabi gli stati.
+// Se gli indici sono compatibili con le dimensioni ma non presenti e lo stato è UNCOMPRESSED aggiungo l'elemento e restituisco una reference così posso scriverlo.
+// Se gli indici sono compatibili con le dimensioni ma non presenti e lo stato è COMPRESSED non posso aggiungere l'elemento. Per non bloccare il programma restituisco la reference di un buffer in cui l'utente può scrivere senza danneggiare la matrice.
 template<StorageOptions SO, typename T>
 T& SparseMatrix<SO,T>::operator()(const size_type r, const size_type c) {
     if(in_bound(r,c)){
@@ -338,6 +346,7 @@ T& SparseMatrix<SO,T>::operator()(const size_type r, const size_type c) {
 };
 
 // Deletion of wrongly added element
+// Siccome l'utente può aggiungere elementi coin il call operator sbagliando gli indici fornisco un metodo per rimuovere elementi indesiderati nello stato UNCOMPRESSED.
 template<StorageOptions SO, typename T>
 bool SparseMatrix<SO,T>::delete_element(const size_type r, const size_type c){
     if(state == UNCOMPRESSED){
@@ -347,6 +356,11 @@ bool SparseMatrix<SO,T>::delete_element(const size_type r, const size_type c){
 };
 
 // Multiply operator by vectors
+// Gestisce i vari casi in modo diverso:
+// UNCOMPRESSED: scorre la mappa e somma il risultato locale al vettore result nella posizione corretta
+// COMPRESSED: due implementazioni diverse in funzione della StorageOptions
+//      RowMajor: estrae le righe della matrice e usa std::inner_product
+//      ColMajor: sfrutta il fatto che il risultato è una combinazione lineare delle colonne, sfruttando std::transorm
 template<StorageOptions SO, typename T>
 std::vector<T> SparseMatrix<SO,T>::operator*(const std::vector<T>& v) const{
     std::vector<T> result(rows);
@@ -372,6 +386,9 @@ std::vector<T> SparseMatrix<SO,T>::operator*(const std::vector<T>& v) const{
 }
 
 // Multiply operator by Matrix
+// Simile al precedente:
+// UNCOMPRESSED: scorre la mappa delle lhs e se nella rhs ci sono elementi corrispondenti opportuni somma il risultato locale al vettore result nella posizione corretta
+// COMPRESSED: estrae righe della lhs e colonne della rhs e sfrutta std::inner_product per fare i calcoli
 template<StorageOptions SO, typename T>
 std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,T>& r) const{
     std::vector<std::vector<T>> result(rows,std::vector<T>(r.cols,0));
@@ -396,70 +413,10 @@ std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,
     return result;
 }
 
-// Read matrix from file
-template<StorageOptions SO, typename T>
-SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
-    std::ifstream file(filename);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Unable to open file");
-    }
-
-    while (file.peek() == '%') {
-        file.ignore(2048, '\n');
-    }
-
-    // Leggi le dimensioni della matrice
-    size_type<SO,T> n_rows, n_cols, n_elements;
-    file >> n_rows >> n_cols >> n_elements;
-
-    // Creazione container per i dati
-    uncompressed_container_type<SO,T> data_map;
-
-    for (size_type<SO,T> i = 0; i < n_elements; ++i) {
-        size_type<SO,T> row, col;
-        T value;
-        file >> row >> col >> value;
-        data_map[{row-1, col-1}] = value;
-    }
-
-    return SparseMatrix<SO, T>(n_rows, n_cols, data_map);
-}
-
-// Generate a random matrix
-template<StorageOptions SO, typename T>
-SparseMatrix<SO, T> generate_random_matrix(size_type<SO,T> rows, size_type<SO,T> cols, size_type<SO,T> n_elements, T min=std::numeric_limits<T>::lowest(), T max=std::numeric_limits<T>::max()){
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<size_type<SO,T>> row_dist(0,rows-1);
-    std::uniform_int_distribution<size_type<SO,T>> col_dist(0,cols-1);
-
-    uncompressed_container_type<SO,T> data_map;
-
-    if constexpr (std::is_same<T, std::complex<float>>::value || 
-                  std::is_same<T, std::complex<double>>::value || 
-                  std::is_same<T, std::complex<long double>>::value) {
-        std::uniform_real_distribution<typename T::value_type> val_dist(min.real(), max.real());
-        for(size_type<SO,T> i=0; i<n_elements; ++i){
-            size_type<SO,T> row = row_dist(gen);
-            size_type<SO,T> col = col_dist(gen);
-            T value = T(val_dist(gen), val_dist(gen)); // generate a complex number
-            data_map[{row,col}] = value;
-        }
-    } else {
-        std::uniform_real_distribution<T> val_dist(min, max);
-        for(size_type<SO,T> i=0; i<n_elements; ++i){
-            size_type<SO,T> row = row_dist(gen);
-            size_type<SO,T> col = col_dist(gen);
-            T value = val_dist(gen);
-            data_map[{row,col}] = value;
-        }
-    }
-
-    return SparseMatrix<SO,T>(rows,cols,data_map);
-}
-
 // Norm
+// Usa algoritmi della standard library combinati con lambda functions, e meccanismi di lettura già visti nei metodi precedenti.
+// Se la matrice è compressa allora usa i vettori compressi, altrimenti scorre la mappa e fa le operazioni necessarie.
+// Se la norma è One allora calcola la norma 1 di ogni riga e tiene il massimo, se è Infinity calcola la norma 1 di ogni colonna e tiene il massimo, se è Froebenius calcola la norma 2 della matrice.
 template<StorageOptions SO,typename T>
 template<NormOptions N>
 typename SparseMatrix<SO,T>::norm_type SparseMatrix<SO,T>::norm() const{
@@ -499,5 +456,73 @@ typename SparseMatrix<SO,T>::norm_type SparseMatrix<SO,T>::norm() const{
     }
     return norm;
 };
+
+// Read matrix from file
+template<StorageOptions SO, typename T>
+SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("Unable to open file");
+    }
+    // Buttiamo via i % iniziali
+    while (file.peek() == '%') {
+        file.ignore(2048, '\n');
+    }
+
+    // Leggi le dimensioni della matrice
+    size_type<SO,T> n_rows, n_cols, n_elements;
+    file >> n_rows >> n_cols >> n_elements;
+
+    // Creazione container per i dati
+    uncompressed_container_type<SO,T> data_map;
+
+    // Riempi la mappa
+    for (size_type<SO,T> i = 0; i < n_elements; ++i) {
+        size_type<SO,T> row, col;
+        T value;
+        file >> row >> col >> value;
+        data_map[{row-1, col-1}] = value;
+    }
+
+    return SparseMatrix<SO, T>(n_rows, n_cols, data_map);
+}
+
+// Generate a random matrix
+template<StorageOptions SO, typename T>
+SparseMatrix<SO, T> generate_random_matrix(size_type<SO,T> rows, size_type<SO,T> cols, size_type<SO,T> n_elements, T min=std::numeric_limits<T>::lowest(), T max=std::numeric_limits<T>::max()){
+    // Random part
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_type<SO,T>> row_dist(0,rows-1);
+    std::uniform_int_distribution<size_type<SO,T>> col_dist(0,cols-1);
+
+    // Creazione container per i dati
+    uncompressed_container_type<SO,T> data_map;
+
+    // Controlla se è un complex number e riempie di conseguenza
+    if constexpr (std::is_same<T, std::complex<float>>::value || 
+                  std::is_same<T, std::complex<double>>::value || 
+                  std::is_same<T, std::complex<long double>>::value) {
+        std::uniform_real_distribution<typename T::value_type> val_dist(min.real(), max.real());
+        for(size_type<SO,T> i=0; i<n_elements; ++i){
+            size_type<SO,T> row = row_dist(gen);
+            size_type<SO,T> col = col_dist(gen);
+            T value = T(val_dist(gen), val_dist(gen)); // generate a complex number
+            data_map[{row,col}] = value;
+        }
+    } else {//Reale
+        std::uniform_real_distribution<T> val_dist(min, max);
+        for(size_type<SO,T> i=0; i<n_elements; ++i){
+            size_type<SO,T> row = row_dist(gen);
+            size_type<SO,T> col = col_dist(gen);
+            T value = val_dist(gen);
+            data_map[{row,col}] = value;
+        }
+    }
+
+    return SparseMatrix<SO,T>(rows,cols,data_map);
+}
+
 
 #endif
