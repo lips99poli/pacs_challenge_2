@@ -51,6 +51,10 @@ To also remove any generated documentation and temporary files, run:
 make distclean
 ```
 
+## Suggestion
+
+There is a file named `SparseMatrixExplanatio` in folder `/include` with explanation of the method, friend functions and type traits of the class. This clarify well its use and implementation.
+
 ## Technical Notes
 
 - The implementation is designed to work correctly with various data types including `double`, `int`, `float`, and `std::complex`.
