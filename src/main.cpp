@@ -1,258 +1,96 @@
-#include "SparseMatrix.hpp"
+#include "Utils.hpp"
 
-// Define the type alias for type of the indexes of the matrix
-template<StorageOptions SO,class T>
-using size_type = typename Value_Traits<SO,T>::size_type;
-
-// Define the type alias for the type of the values of the matrix
-template<StorageOptions SO,class T>
-using value_type = typename Value_Traits<SO,T>::value_type;
-
-// Define the type alias for the type of the uncompressed container of data of the matrix
-template<StorageOptions SO,class T>
-using uncompressed_container_type = typename Value_Traits<SO,T>::uncompressed_container;
-
-// Define the type alias for the type of the compressed container of data of the matrix
-template<StorageOptions SO,class T>
-using compressed_container_type = typename Value_Traits<SO,T>::compressed_container;
-
-template<StorageOptions SO,class T>
-using key_type = typename Value_Traits<SO,T>::key_type;
-
-int main(){
-    //std::map<key_type<ColumnMajor,double>,double> dati = {{{0,1},1.},{{1,2},2.},{{3,0},3.},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
-    //std::map<std::array<std::size_t,2>,double> dati = {{{0,1},1.},{{1,2},2.},{{3,0},3.},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
-    //std::map<Key_Uncompressed_Struct<RowMajor,double>,double> dati = {{{0,1},1.},{{1,2},2.},{{3,0},3.},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
-    constexpr StorageOptions SO = RowMajor;
-    uncompressed_container_type<SO,double> dati = {{{0,1},1.},{{0,2},2.9},{{1,2},2.},{{3,0},3.},{{1,9},40.3},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
-
-    //uncompressed_container_type<ColumnMajor,double> dati = {{{0,1},1.},{{1,2},2.},{{3,0},3.},{{3,3},4.},{{4,3},5.},{{4,5},6.}};
-    SparseMatrix<SO,double> m (5,10,dati);
-    // m.compress();
-    // std::cout << m(4,9) << std::endl;
-    // m(4,9) = 10.5;
-    // std::cout << m(4,9) << std::endl;
-
-    m.compress();
-
-    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
-        std::vector<double> r1 = m.get_row(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << *cit << " ";
-        }
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
-        std::vector<double> r1 = m.get_col(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << *cit << " ";
+int main(int argc, char* argv[]){
+    // Parse command line arguments
+    int verbose = 0;
+    int n_iter = 1;
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "--verbose"|| arg == "-v") {
+            if (i + 1 < argc) {
+                int check = std::stoi(argv[i + 1]);
+                if(check == 0 || check == 1 || check == 2){
+                    verbose = check;
+                    ++i;
+                }else{
+                    std::cerr << "Error: --verbose option requires an argument between 0 and 2" << std::endl;
+                    return 1;
+                } 
+            }else{
+                std::cerr << "Error: --verbose option requires an argument" << std::endl;
+                return 1;
+            }
+        }else if (arg == "--n_iter" || arg == "-n") {
+            if (i + 1 < argc) {
+                n_iter = std::stoi(argv[i + 1]);
+                ++i; 
+            }else{
+                std::cerr << "Error: --n_iter option requires an argument" << std::endl;
+                return 1;
+            }
         }
     }
 
-    std::cout << std::endl;
-    std::cout << std::endl;
-    m.uncompress();
-    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
-        std::vector<double> r1 = m.get_row(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << *cit << " ";
-        }
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
+    Timings::Chrono timer;
+    constexpr StorageOptions SO_R = RowMajor;
+    constexpr StorageOptions SO_C = ColumnMajor;
 
-    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
-        std::vector<double> r1 = m.get_col(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << *cit << " ";
-        }
-    }
-    // m(1,8) = 19.4;
-    // std::cout << m(1,8) << std::endl;
+    auto run_real = [&]() {
+        std::cout << "SCALAR EXPERIENCE -- ROW_MAJOR" << std::endl;
+        std::cout <<"--------------------------------------" << std::endl;
 
-    // m(3,2) = 7.9;
-    // std::cout << m(3,2) << std::endl;
+        SparseMatrix<SO_R,double> m_r = read_matrix_from_file<SO_R,double>("lnsp_131.mtx");
 
-    // m(13,14) = 2.4;
-    // std::cout << m(13,14) << std::endl;
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    // std::cout << m.is_compressed() << std::endl;
-    // m.compress();
-    // // std::cout << m.is_compressed() << std::endl;
-
-    // // uncompressed_container_type<RowMajor,double> dati2 = {{{2,2},5.},{{3,8},3.},{{3,9},3.},{{10,3},3.}};
-    // // const SparseMatrix<RowMajor,double> mc (10,15,dati2);
-    // // std::cout << mc(2,2) << std::endl;
-    // // std::cout << mc.is_compressed() << std::endl;
-
-    // std::cout << std::endl;
-    // std::cout << std::endl;
+        // Generate a random vector for the multiplication experiment
+        std::vector<double> v = vector_generator<double>(m_r.get_n_cols());
+        // Generate a random matrix for the multiplication experiment
+        SparseMatrix<SO_R,double> m_r2 = generate_random_matrix<SO_R,double>(131,131,536,-50,50);
+        
+        test_matrix(timer,m_r,m_r2,v,n_iter);
     
-    
-    // std::cout << m(0,1) << std::endl;
-    // std::cout << m(4,9) << std::endl;
-    // std::cout << m(3,3) << std::endl;
-    // std::cout << m(4,3) << std::endl;
-    // m(1,1) = 10.5;
-    // std::cout << m(1,1) << std::endl;
+        std::cout << "SCALAR EXPERIENCE -- COLUMN_MAJOR" << std::endl;
+        std::cout <<"--------------------------------------" << std::endl;
 
-    // std::cout << std::endl;
-    // std::cout << std::endl;
+        SparseMatrix<SO_C,double> m_c = read_matrix_from_file<SO_C,double>("lnsp_131.mtx");
+        // Generate a random matrix for the multiplication experiment
+        SparseMatrix<SO_C,double> m_c2 = generate_random_matrix<SO_C,double>(131,131,536,-50,50);
 
-    // m.uncompress();
-    // std::cout << m.is_compressed() << std::endl;
-    // std::cout << std::endl;
+        test_matrix(timer,m_c,m_c2,v,n_iter);
+    };
 
-    // std::cout << m(0,1) << std::endl;
-    // std::cout << m(4,9) << std::endl;
-    // std::cout << m(3,3) << std::endl;
-    // std::cout << m(4,3) << std::endl;
-    // m(1,1) = 10.5;
-    // std::cout << m(1,1) << std::endl;
+    auto run_complex = [&]() {
+        std::cout << "COMPLEX EXPERIENCE -- ROW_MAJOR" << std::endl;
+        std::cout <<"--------------------------------------" << std::endl;
+        // Crea la matrice
+        SparseMatrix<SO_R,std::complex<double>> m_r_complex = generate_random_matrix<SO_R,std::complex<double>>(131,131,536,{-50,-50},{50,50});
 
-    
-    // std::cout << m(4,9) << std::endl;
-    // m.delete_element(4,9);
+        // Generate a random vector for the multiplication experiment
+        std::vector<std::complex<double>> v_complex = vector_generator<std::complex<double>>(m_r_complex.get_n_cols(),std::complex<double>(-100,-100),std::complex<double>(100,100));
+        
+        // Generate a random matrix for the multiplication experiment
+        SparseMatrix<SO_R,std::complex<double>> m_r_complex2 = generate_random_matrix<SO_R,std::complex<double>>(131,131,536,{-50,-50},{50,50});
 
-    // m.compress();
+        test_matrix(timer,m_r_complex,m_r_complex2,v_complex,n_iter);
 
-    // std::cout << std::endl;
-    // std::cout << std::endl;
+        std::cout << "COMPLEX EXPERIENCE -- COLUMN_MAJOR" << std::endl;
+        std::cout <<"--------------------------------------" << std::endl;
+        // Crea la matrice
+        SparseMatrix<SO_C,std::complex<double>> m_c_complex = generate_random_matrix<SO_C,std::complex<double>>(131,131,536,{-50,-50},{50,50});
+        // Generate a random matrix for the multiplication experiment
+        SparseMatrix<SO_C,std::complex<double>> m_c_complex2 = generate_random_matrix<SO_C,std::complex<double>>(131,131,536,{-50,-50},{50,50});
 
-    std::vector<double> vec = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};
-    std::vector<double> res = m*vec;
+        test_matrix(timer,m_c_complex,m_c_complex2,v_complex,n_iter);
+    };
 
-    for(auto cit=res.cbegin();cit!=res.cend();++cit){
-        std::cout <<"el "<< *cit << std::endl;
+
+    if(verbose == 1){
+        run_real();
+    }else if(verbose == 2){
+        run_complex();
+    }else{
+        run_real();
+        run_complex();
     }
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-    m.compress();
-    std::vector<double> res2 = m*vec;
-
-    for(auto cit=res2.cbegin();cit!=res2.cend();++cit){
-        std::cout <<"el "<< *cit << std::endl;
-    }
-
-
-    // m(3,3) = 14;
-    // std::cout << m(3,3);
-    // m(20,20) = 89;
-    //const SparseMatrix<RowMajor,double>& mc = m;
-    //std::cout << mc(2,3) << std::endl;
-
-    uncompressed_container_type<SO,std::complex<double>> dati_complex = {{{0,1},{1.,3.}},{{0,2},{2.9,4.5}},{{1,2},{2.,3.1}},{{3,0},{3.,2.9}},{{1,9},{40.3,1}},{{3,3},{4.,0.6}},{{4,3},{5.,2.32}},{{4,5},{6.,9.8}}};
-
-    SparseMatrix<SO,std::complex<double>> m_complex (5,10,dati_complex);
-
-
-    m_complex.compress();
-
-    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
-        std::vector<std::complex<double>> r1 = m_complex.get_row(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << "re: " << cit->real() << " im: "<< cit->imag() << " ";
-        }
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
-        std::vector<std::complex<double>> r1 = m_complex.get_col(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << "re: " << cit->real() << " im: "<< cit->imag() << " ";
-        }
-    }
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-    m_complex.uncompress();
-    for(std::size_t i=0;i<5;++i, std::cout << std::endl){
-        std::vector<std::complex<double>> r1 = m_complex.get_row(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << "re: " << cit->real() << " im: "<< cit->imag() << " ";
-        }
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    for(std::size_t i=0;i<10;++i, std::cout << std::endl){
-        std::vector<std::complex<double>> r1 = m_complex.get_col(i);
-        for (auto cit = r1.cbegin(); cit != r1.cend(); ++cit){
-            std::cout << "re: " << cit->real() << " im: "<< cit->imag() << " ";
-        }
-    }
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    std::vector<std::complex<double>> vec2 = {1.,1.,1.,1.,1.,1.,1.,1.,1.,1.};
-    std::vector<std::complex<double>> res3 = m_complex*vec2;
-
-    for(auto cit=res3.cbegin();cit!=res3.cend();++cit){
-        std::cout <<"el "<< "re: " << cit->real() << " im: "<< cit->imag() << " ";
-    }
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-    m_complex.compress();
-    std::vector<std::complex<double>> res4 = m_complex*vec2;
-
-    for(auto cit=res4.cbegin();cit!=res4.cend();++cit){
-        std::cout <<"el "<< "re: " << cit->real() << " im: "<< cit->imag() << " ";
-    }
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Norma 1: " << m.norm<One>() << std::endl;
-
-    std::cout << "Norma Inf: " << m.norm<Infinity>() << std::endl;
-
-    std::cout << "Norma Fro: " << m.norm<Froebenius>() << std::endl;
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Norma 1: " << m_complex.norm<One>() << std::endl;
-
-    std::cout << "Norma Inf: " << m_complex.norm<Infinity>() << std::endl;
-
-    std::cout << "Norma Fro: " << m_complex.norm<Froebenius>() << std::endl;
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-
-
-    SparseMatrix<SO,double> m7 = read_matrix_from_file<SO,double>("lnsp_131.mtx");
-    std::cout << "Matrix read from file" << std::endl;
-    std::cout << "Norma 1: " << m7.norm<One>() << std::endl;
-    std::cout << "Norma Inf: " << m7.norm<Infinity>() << std::endl;
-    std::cout << "Norma Fro: " << m7.norm<Froebenius>() << std::endl;
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-    
-    std::cout <<"El:" << m7(0,0) << std::endl;
-    std::cout <<"El:" << m7(8,0) << std::endl;
-    std::cout <<"El:" << m7(35,10) << std::endl;
-
-    
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-    m7.compress();
-    
-    std::cout <<"El:" << m7(0,0) << std::endl;
-    std::cout <<"El:" << m7(8,0) << std::endl;
-    std::cout <<"El:" << m7(35,10) << std::endl;
 
     return 0;
 };
