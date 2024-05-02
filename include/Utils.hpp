@@ -48,42 +48,42 @@ template<StorageOptions SO,typename T>
 void test_matrix(Timings::Chrono& timer, SparseMatrix<SO,T>& m, SparseMatrix<SO,T>& m2, std::vector<T>& v, std::size_t n_iter=5){
 
     for(std::size_t i=0;i<n_iter;++i){
-        std::cout<<"Iteration: " << i+1 << std::endl;
+        std::cout<<"Experiment: " << i+1 << std::endl;
         // Compression experiment
         timer.start();
         m.compress();
         timer.stop();
-        std::cout << "Compression Experiment: " << timer;
+        std::cout << "Compression: " << timer;
 
         // Vector multiplication experiment COMPRESSED STATE
         timer.start();
         std::vector<T> res_comp = m*v;
         timer.stop();
-        std::cout << "Vector Multiplication experiment -- compressed state: " << timer;
+        std::cout << "Vector Multiplication -- compressed state: " << timer;
 
         // Matrix multiplication experiment COMPRESSED STATE
         timer.start();
         std::vector<T> res_comp_m = m2*v;
         timer.stop();
-        std::cout << "Matrix Multiplication experiment -- compressed state: " << timer;
+        std::cout << "Matrix Multiplication -- compressed state: " << timer;
 
         // Uncompression experiment
         timer.start();
         m.uncompress();
         timer.stop();
-        std::cout << "Uncompression experiment: " << timer;
+        std::cout << "Uncompression: " << timer;
 
         // Vector multiplication experiment UNCOMPRESSED STATE
         timer.start();
         std::vector<T> res_uncomp = m*v;
         timer.stop();
-        std::cout << "Vector Multiplication experiment -- uncompressed state: " << timer;
+        std::cout << "Vector Multiplication -- uncompressed state: " << timer;
 
         // Matrix multiplication experiment UNCOMPRESSED STATE
         timer.start();
         std::vector<T> res_uncomp_m = m2*v;
         timer.stop();
-        std::cout << "Matrix Multiplication experiment -- uncompressed state: " << timer;
+        std::cout << "Matrix Multiplication -- uncompressed state: " << timer;
         std::cout <<"xxxxxxxxxxxx\n" << std::endl;
     }
     std::cout << std::endl;

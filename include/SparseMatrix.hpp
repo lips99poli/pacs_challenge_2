@@ -268,13 +268,8 @@ void SparseMatrix<SO,T>::uncompress(){
         for(size_type major=0; major<compressed_data.major_change_index.size()-1; ++major){
             for(size_type non_major=compressed_data.major_change_index[major]; non_major<compressed_data.major_change_index[major+1]; ++non_major){
                 key_type position;
-                if constexpr (SO == RowMajor) {
-                    position[0] = major;
-                    position[1] = compressed_data.non_major_index[non_major];
-                } else {
-                    position[1] = compressed_data.non_major_index[non_major];
-                    position[0] = major;
-                }
+                position[SO] = major;
+                position[otherSO] = compressed_data.non_major_index[non_major];
                 new_uncompressed_data[position] = compressed_data.values[non_major];
             }
         }

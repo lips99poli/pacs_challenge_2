@@ -2,13 +2,14 @@
 
 int main(int argc, char* argv[]){
     // Parse command line arguments
-    int verbose = 0;
+    int verbose = 0; //is 0, 1, or 2
     int n_iter = 1;
+    // Loop over all command line arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--verbose"|| arg == "-v") {
             if (i + 1 < argc) {
-                int check = std::stoi(argv[i + 1]);
+                int check = std::stoi(argv[i + 1]); // Convert the next argument to an integer
                 if(check == 0 || check == 1 || check == 2){
                     verbose = check;
                     ++i;
@@ -22,7 +23,7 @@ int main(int argc, char* argv[]){
             }
         }else if (arg == "--n_iter" || arg == "-n") {
             if (i + 1 < argc) {
-                n_iter = std::stoi(argv[i + 1]);
+                n_iter = std::stoi(argv[i + 1]); // Convert the next argument to an integer
                 ++i; 
             }else{
                 std::cerr << "Error: --n_iter option requires an argument" << std::endl;
@@ -35,10 +36,12 @@ int main(int argc, char* argv[]){
     constexpr StorageOptions SO_R = RowMajor;
     constexpr StorageOptions SO_C = ColumnMajor;
 
+    // Define a lambda function to run the real experiment
     auto run_real = [&]() {
         std::cout << "SCALAR EXPERIENCE -- ROW_MAJOR" << std::endl;
         std::cout <<"--------------------------------------" << std::endl;
 
+        // Read the matrix from file
         SparseMatrix<SO_R,double> m_r = read_matrix_from_file<SO_R,double>("lnsp_131.mtx");
 
         // Generate a random vector for the multiplication experiment
@@ -51,6 +54,7 @@ int main(int argc, char* argv[]){
         std::cout << "SCALAR EXPERIENCE -- COLUMN_MAJOR" << std::endl;
         std::cout <<"--------------------------------------" << std::endl;
 
+        // Read the matrix from file
         SparseMatrix<SO_C,double> m_c = read_matrix_from_file<SO_C,double>("lnsp_131.mtx");
         // Generate a random matrix for the multiplication experiment
         SparseMatrix<SO_C,double> m_c2 = generate_random_matrix<SO_C,double>(131,131,536,-50,50);
@@ -58,6 +62,7 @@ int main(int argc, char* argv[]){
         test_matrix(timer,m_c,m_c2,v,n_iter);
     };
 
+    // Define a lambda function to run the complex experiment
     auto run_complex = [&]() {
         std::cout << "COMPLEX EXPERIENCE -- ROW_MAJOR" << std::endl;
         std::cout <<"--------------------------------------" << std::endl;
