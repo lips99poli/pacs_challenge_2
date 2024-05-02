@@ -378,22 +378,22 @@ std::vector<T> SparseMatrix<SO,T>::operator*(const std::vector<T>& v) const{
 
 // Multiply operator by Matrix
 template<StorageOptions SO, typename T>
-std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,T>& l) const{
-    std::vector<std::vector<T>> result(rows,std::vector<T>(l.cols,0));
-    if(state == UNCOMPRESSED){
+std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,T>& r) const{
+    std::vector<std::vector<T>> result(rows,std::vector<T>(r.cols,0));
+    if(state == UNCOMPRESSED && r.state == UNCOMPRESSED){
         for (auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit){
-            for(size_type i=0; i<l.cols; ++i){
-                const auto lcit = l.uncompressed_data.find({cit->first[0],i});
-                if(lcit != l.uncompressed_data.end()){
-                    result[cit->first[0]][i] += cit->second * lcit->second;
+            for(size_type i=0; i<r.cols; ++i){
+                const auto rcit = r.uncompressed_data.find({cit->first[0],i});
+                if(rcit != r.uncompressed_data.end()){
+                    result[cit->first[0]][i] += cit->second * rcit->second;
                 }
             }
         }
     }else{
         for(size_type i=0; i<rows; ++i){
             std::vector<T> row = get_row(i);
-            for(size_type j=0; j<l.cols; ++j){
-                std::vector<T> col = l.get_col(j);
+            for(size_type j=0; j<r.cols; ++j){
+                std::vector<T> col = r.get_col(j);
                 result[i][j] = std::inner_product(row.begin(),row.end(),col.begin(),T(0));
             }
         }
