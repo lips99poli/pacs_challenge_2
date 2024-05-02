@@ -3,8 +3,6 @@
 
 #include "SparseMatrixTraits.hpp"
 
-// Aggiungere overload operator << per aggiungere elementi
-
 enum State {
     UNCOMPRESSED=0,
     COMPRESSED=1
@@ -13,6 +11,8 @@ enum State {
 template<StorageOptions SO, typename T>
 class SparseMatrix{
 
+    public:
+    // Define type aliases
     using size_type = typename Value_Traits<SO,T>::size_type;
     using value_type = typename Value_Traits<SO,T>::value_type; //in realtà questo è T quindi non serve
     using uncompressed_container_type = typename Value_Traits<SO,T>::uncompressed_container;
@@ -63,8 +63,10 @@ class SparseMatrix{
     //         compressed_data = other.compressed_data;
     //     }
     // }
-
     // Quindi dovrei già avere anche l'assignment operator
+
+    size_type get_n_rows() const {return rows;};
+    size_type get_n_cols() const {return cols;};
 
     std::vector<T> get_row(size_type r)const;
     std::vector<T> get_col(size_type c)const;
@@ -98,6 +100,10 @@ class SparseMatrix{
     // Read matrix from file
     template<StorageOptions SO_file, typename T_file>
     friend SparseMatrix<SO_file, T_file> read_matrix_from_file(const std::string& filename);
+
+    // Generate a random matrix
+    template<StorageOptions SO_gen, typename T_gen>
+    friend SparseMatrix<SO_gen, T_gen> generate_random_matrix(size_type rows, size_type cols, size_type n_elements, T_gen min, T_gen max); 
 
     // Norm
     template<NormOptions N>
@@ -135,7 +141,7 @@ bool SparseMatrix<SO,T>::verify_presence(size_type r, size_type c) const {
 
 // PUBBLIC METHODS:
 
-// Extract vector
+// Extract vector from matrix
 template<StorageOptions SO, typename T>
 template<ExtractOptions RorC>
 std::vector<T> SparseMatrix<SO,T>::extract_vector(size_type k) const{
@@ -187,11 +193,13 @@ std::vector<T> SparseMatrix<SO,T>::extract_vector(size_type k) const{
     return vec;
 };
 
+// Extract a row
 template<StorageOptions SO, typename T>
 std::vector<T> SparseMatrix<SO,T>::get_row(size_type r)const{
     return extract_vector<Row>(r);
 };
 
+// Extract a column
 template<StorageOptions SO, typename T>
 std::vector<T> SparseMatrix<SO,T>::get_col(size_type c)const{
     return extract_vector<Col>(c);
@@ -206,9 +214,21 @@ bool SparseMatrix<SO,T>::is_compressed() const {
 // Resize
 template<StorageOptions SO, typename T>
 void SparseMatrix<SO,T>::resize(size_type R, size_type C){
-    // si potrebbe controllare se ho degli elementi con indici maggiori delle nuove taglie e se si eliminare quegli elementi
-    rows = R;
-    cols = C;
+    if(state == COMPRESSED){
+        std::cout <<"Uncompresse your matrix if you want to resize it" << std::endl;
+    }else{
+        if(R>=rows && C>=cols){
+            rows = R;
+            cols = C;
+        }
+        else{
+            for(auto it=uncompressed_data.begin(); it!=uncompressed_data.end();++it){
+                if(it->first[0]>=R || it->first[1]>=C){
+                    it = uncompressed_data.erase(it);
+                }
+            }
+        }
+    }
 };
 
 // Compress 
@@ -225,16 +245,13 @@ void SparseMatrix<SO,T>::compress(){
         // se voglio leggere la mappa in un modo solo allora devo fare l'overload di operator< per il container e poi qua devo selezionare il giusto indice da prendere dalla chiave della mappa
         // per fortuna gli enumerator sono convertibili ad interi quindi il non_major per rowmajor sarà colmajor = 1, e per colmajor sarà rowmajor = 0
         size_type count = 0;
-        size_type old = 0;
         for(auto cit=uncompressed_data.cbegin(); cit!=uncompressed_data.cend(); ++cit, ++count){
             compressed_data.values.emplace_back(cit->second);
             compressed_data.non_major_index.emplace_back(cit->first[otherSO]);
             std::for_each(compressed_data.major_change_index.begin()+cit->first[SO]+1,compressed_data.major_change_index.end(),[](size_type& r){++r;});
         }
-
         // svuota la mappa
         uncompressed_data.clear();
-
         // cambia lo stato
         state = COMPRESSED;
     }else{
@@ -272,11 +289,10 @@ void SparseMatrix<SO,T>::uncompress(){
     }
 };
 
-// const version of call operator
+// Const version of call operator
 template<StorageOptions SO, typename T>
 const T& SparseMatrix<SO,T>::operator() (const size_type r, const size_type c) const {
     if(in_bound(r,c)){
-        //typename uncompressed_container_type::key_type position = {r,c};
         key_type position({r,c});
 
         if (verify_presence(r,c)){
@@ -297,7 +313,7 @@ const T& SparseMatrix<SO,T>::operator() (const size_type r, const size_type c) c
     }
 };
 
-// non-const version of call operator
+// Non-const version of call operator
 template<StorageOptions SO, typename T>
 T& SparseMatrix<SO,T>::operator()(const size_type r, const size_type c) {
     if(in_bound(r,c)){
@@ -385,6 +401,7 @@ std::vector<std::vector<T>> SparseMatrix<SO,T>::operator*(const SparseMatrix<SO,
     return result;
 }
 
+// Read matrix from file
 template<StorageOptions SO, typename T>
 SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
     std::ifstream file(filename);
@@ -412,6 +429,39 @@ SparseMatrix<SO, T> read_matrix_from_file(const std::string& filename) {
     }
 
     return SparseMatrix<SO, T>(n_rows, n_cols, data_map);
+}
+
+// Generate a random matrix
+template<StorageOptions SO, typename T>
+SparseMatrix<SO, T> generate_random_matrix(size_type<SO,T> rows, size_type<SO,T> cols, size_type<SO,T> n_elements, T min=std::numeric_limits<T>::lowest(), T max=std::numeric_limits<T>::max()){
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_type<SO,T>> row_dist(0,rows-1);
+    std::uniform_int_distribution<size_type<SO,T>> col_dist(0,cols-1);
+
+    uncompressed_container_type<SO,T> data_map;
+
+    if constexpr (std::is_same<T, std::complex<float>>::value || 
+                  std::is_same<T, std::complex<double>>::value || 
+                  std::is_same<T, std::complex<long double>>::value) {
+        std::uniform_real_distribution<typename T::value_type> val_dist(min.real(), max.real());
+        for(size_type<SO,T> i=0; i<n_elements; ++i){
+            size_type<SO,T> row = row_dist(gen);
+            size_type<SO,T> col = col_dist(gen);
+            T value = T(val_dist(gen), val_dist(gen)); // generate a complex number
+            data_map[{row,col}] = value;
+        }
+    } else {
+        std::uniform_real_distribution<T> val_dist(min, max);
+        for(size_type<SO,T> i=0; i<n_elements; ++i){
+            size_type<SO,T> row = row_dist(gen);
+            size_type<SO,T> col = col_dist(gen);
+            T value = val_dist(gen);
+            data_map[{row,col}] = value;
+        }
+    }
+
+    return SparseMatrix<SO,T>(rows,cols,data_map);
 }
 
 // Norm

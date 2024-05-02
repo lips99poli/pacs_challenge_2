@@ -16,6 +16,7 @@
 #include <numeric>
 #include <execution>
 #include <complex>
+#include <random>
 
 // Enumerator for Storage options
 enum StorageOptions{
