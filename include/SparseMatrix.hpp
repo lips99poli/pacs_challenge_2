@@ -268,17 +268,23 @@ template<StorageOptions SO, typename T>
 void SparseMatrix<SO,T>::uncompress(){
     if(state == COMPRESSED){
         uncompressed_container_type new_uncompressed_data;
-
+        //conto i valori non nulli nel container
         for(size_type major=0; major<compressed_data.major_change_index.size()-1; ++major){
+            //scorro gli indici dei valori non nulli, posizione non major
             for(size_type non_major=compressed_data.major_change_index[major]; non_major<compressed_data.major_change_index[major+1]; ++non_major){
+                //definisco la chiave
                 key_type position;
+                //la riempio in funzione dello storage option
                 position[SO] = major;
                 position[otherSO] = compressed_data.non_major_index[non_major];
+                //inserisco il valore nella mappa
                 new_uncompressed_data[position] = compressed_data.values[non_major];
             }
         }
 
+        //riempi il container della matrice con i nuovi dati, sfruttando move semantics
         uncompressed_data = std::move(new_uncompressed_data);
+        // svuota i vettori del container compresso
         compressed_data.clear();
 
         // cambia lo stato
