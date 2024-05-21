@@ -1,0 +1,17 @@
+- Documentation is clear and complete
+
+- loss in computational time when matrix is compressed
+
+- you should not leave a commented part of the tests in the main. Put it in a separate test file so that you can easily run it
+
+- delete your personal comments when you push on the git repo
+- choose one single language for the comments
+
+- you could put the traits in the namespace algebra
+
+- why static constexpr?
+        because constexpr means that the variable you are defining is available at compile time, while in ia class the member variable
+
+- you should have defined the friend operator* for a product between a matrix and a vector
+
+- missing square root in the Frobenius norm

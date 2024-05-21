@@ -14,7 +14,7 @@ class SparseMatrix{
     public:
     // Define type aliases
     using size_type = typename Value_Traits<SO,T>::size_type;
-    using value_type = typename Value_Traits<SO,T>::value_type; //in realtà questo è T quindi non serve
+//    using value_type = typename Value_Traits<SO,T>::value_type; //in realtà questo è T quindi non serve
     using uncompressed_container_type = typename Value_Traits<SO,T>::uncompressed_container;
     using compressed_container_type = typename Value_Traits<SO,T>::compressed_container;
     using key_type = typename Value_Traits<SO,T>::key_type;
